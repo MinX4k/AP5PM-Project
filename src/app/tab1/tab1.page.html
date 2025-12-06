@@ -5,18 +5,96 @@
 </ion-header>
 
 <ion-content class="ion-padding">
-  <ion-list>
-    <ion-item *ngFor="let r of recipes">
+  <ion-list *ngIf="recipes?.length; else empty">
+    <ion-item *ngFor="let r of recipes" lines="full">
       <ion-label>
         <h2>{{ r.name }}</h2>
         <p *ngIf="r.description">{{ r.description }}</p>
+
+        <div *ngIf="r.ingredients?.length" class="ingredients-brief">
+          <small *ngFor="let ing of r.ingredients; let i = index">
+            {{ ing.name }}{{ ing.amount ? ' — ' + ing.amount + (ing.unit ? ' ' + ing.unit : '') : '' }}<span *ngIf="i < (r.ingredients.length - 1)">, </span>
+          </small>
+        </div>
       </ion-label>
+
+      <ion-buttons slot="end">
+        <ion-button color="danger" (click)="deleteRecipe(r)">
+          <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+        </ion-button>
+      </ion-buttons>
     </ion-item>
   </ion-list>
 
+  <ng-template #empty>
+    <div class="ion-text-center ion-padding">
+      <p>Žádné recepty. Přidej první recept tlačítkem +.</p>
+    </div>
+  </ng-template>
+
   <ion-fab vertical="bottom" horizontal="end" slot="fixed">
-    <ion-fab-button (click)="null">
+    <ion-fab-button (click)="openAdd()">
       <ion-icon name="add"></ion-icon>
     </ion-fab-button>
   </ion-fab>
+
+  <div class="add-overlay" *ngIf="showAdd">
+    <div class="add-card">
+      <ion-header>
+        <ion-toolbar>
+          <ion-title>Přidat recept</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="closeAdd()"><ion-icon name="close"></ion-icon></ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+
+      <ion-content class="ion-padding">
+        <ion-item>
+          <ion-label position="stacked">Název</ion-label>
+          <ion-input [(ngModel)]="newRecipeName" placeholder="Např. Rajčatová polévka"></ion-input>
+        </ion-item>
+
+        <ion-item>
+          <ion-label position="stacked">Popis (volitelné)</ion-label>
+          <ion-textarea [(ngModel)]="newRecipeDescription" placeholder="Krátký popis"></ion-textarea>
+        </ion-item>
+
+        <div class="ingredient-row">
+          <ion-item lines="none" class="ingredient-input">
+            <ion-input [(ngModel)]="ingredientName" placeholder="Ingredience (název)"></ion-input>
+          </ion-item>
+          <ion-item lines="none" class="ingredient-input">
+            <ion-input type="number" [(ngModel)]="ingredientAmount" placeholder="Množství"></ion-input>
+          </ion-item>
+          <ion-item lines="none" class="ingredient-input">
+            <ion-input [(ngModel)]="ingredientUnit" placeholder="Jednotka (g, ks...)"></ion-input>
+          </ion-item>
+          <ion-button (click)="addIngredientToList()" class="add-ing-button">Přidat</ion-button>
+        </div>
+
+        <div *ngIf="ingredients.length" class="current-ingredients">
+          <h3>Ingredience</h3>
+          <ion-list>
+            <ion-item *ngFor="let ing of ingredients; let i = index">
+              <ion-label>
+                <strong>{{ ing.name }}</strong>
+                <div *ngIf="ing.amount">{{ ing.amount }} {{ ing.unit }}</div>
+              </ion-label>
+              <ion-button slot="end" color="medium" (click)="removeIngredient(i)">
+                <ion-icon name="remove-circle-outline"></ion-icon>
+              </ion-button>
+            </ion-item>
+          </ion-list>
+        </div>
+
+        <div class="buttons-row">
+          <ion-button expand="block" color="primary" (click)="saveRecipe()" [disabled]="saving">
+            {{ saving ? 'Ukládám…' : 'Uložit recept' }}
+          </ion-button>
+          <ion-button expand="block" color="light" (click)="closeAdd()">Zrušit</ion-button>
+        </div>
+      </ion-content>
+    </div>
+  </div>
 </ion-content>

@@ -5,6 +5,7 @@ import { ToastController } from '@ionic/angular';
 
 import { Capacitor } from '@capacitor/core';
 import { CapacitorBarcodeScanner, CapacitorBarcodeScannerTypeHint } from '@capacitor/barcode-scanner';
+import { BarcodeService } from '../services/barcode.service';
 
 @Component({
   selector: 'app-tab3',
@@ -22,7 +23,8 @@ export class Tab3Page {
   constructor(
     private fs: FirebaseService,
     private pantry: PantryService,
-    private toast: ToastController
+    private toast: ToastController,
+    private barcodeService: BarcodeService
   ) {}
 
   async scan() {
@@ -40,8 +42,6 @@ export class Tab3Page {
     });
 
     this.scanning = false;
-
-    // různé verze pluginu můžou vracet různé property
     const code =
       result?.ScanResult ??
       result?.text ??
@@ -69,21 +69,19 @@ export class Tab3Page {
 }
 
   async findByBarcode() {
-    if (!this.barcode) { 
-      await this.presentToast('Zadej nebo naskenuj čárový kód'); 
-      return; 
-    }
+  if (!this.barcode) { await this.presentToast('Zadej nebo naskenuj čárový kód'); return; }
 
-    const prods = await this.fs.getProductByBarcode(this.barcode);
-    if (prods.length) {
-      const p: any = prods[0];
-      this.name = p.name || '';
-      this.unit = p.unit || 'ks';
-      await this.presentToast('Produkt nalezen: ' + this.name);
-    } else {
-      await this.presentToast('Produkt s tímto čárovým kódem nenalezen');
-    }
+  const product = await this.barcodeService.findAndSave(this.barcode);
+
+  if (product) {
+    this.name = product.name || '';
+    this.unit = product.unit || 'ks';
+    await this.presentToast('Produkt nalezen: ' + this.name);
+  } else {
+    await this.presentToast('Produkt nenalezen — můžeš ho přidat ručně.');
   }
+}
+
 
   async saveProduct() {
     if (!this.name) { await this.presentToast('Zadej název produktu'); return; }

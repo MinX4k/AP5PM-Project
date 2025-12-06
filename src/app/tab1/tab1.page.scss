@@ -1,0 +1,56 @@
+.add-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+}
+
+.add-card {
+  width: 100%;
+  max-width: 720px;
+  height: 90vh;
+  background: var(--ion-background-color, #fff);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.add-card ion-content {
+  --padding-top: 8px;
+  --padding-bottom: 16px;
+}
+
+.ingredient-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 12px 0;
+  flex-wrap: wrap;
+}
+
+.ingredient-input {
+  flex: 1 1 150px;
+  min-width: 120px;
+}
+
+.add-ing-button {
+  white-space: nowrap;
+  align-self: stretch;
+  margin-left: 4px;
+}
+
+.current-ingredients {
+  margin-top: 8px;
+}
+
+.buttons-row {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  flex-direction: column;
+}
