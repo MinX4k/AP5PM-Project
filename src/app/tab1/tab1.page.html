@@ -1,29 +1,52 @@
 <ion-header>
   <ion-toolbar>
     <ion-title>Recepty</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="openAdd()">
+        <ion-icon slot="icon-only" name="add"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="ion-padding">
   <ion-list *ngIf="recipes?.length; else empty">
-    <ion-item *ngFor="let r of recipes" lines="full">
-      <ion-label>
-        <h2>{{ r.name }}</h2>
-        <p *ngIf="r.description">{{ r.description }}</p>
+    <ion-card *ngFor="let r of recipes" class="recipe-card">
+      <ion-card-header>
+        <ion-card-title>{{ r.name }}</ion-card-title>
+        <ion-card-subtitle *ngIf="r.description">{{ r.description }}</ion-card-subtitle>
+      </ion-card-header>
 
-        <div *ngIf="r.ingredients?.length" class="ingredients-brief">
-          <small *ngFor="let ing of r.ingredients; let i = index">
-            {{ ing.name }}{{ ing.amount ? ' — ' + ing.amount + (ing.unit ? ' ' + ing.unit : '') : '' }}<span *ngIf="i < (r.ingredients.length - 1)">, </span>
-          </small>
+      <ion-card-content>
+        <div class="ingredients-list">
+          <div *ngFor="let ing of r.ingredients" 
+            class="ingredient-row"
+            [class.full]="getIngredientState(ing) === 'full'"
+            [class.partial]="getIngredientState(ing) === 'partial'"
+            [class.none]="getIngredientState(ing) === 'none'">
+
+          <div class="ing-dot"
+              [class.on]="getIngredientState(ing) === 'full'"
+              [class.partial]="getIngredientState(ing) === 'partial'"
+              [class.off]="getIngredientState(ing) === 'none'">
+          </div>
+
+          <div class="ing-text">
+            <div class="ing-name">{{ ing.name }}</div>
+            <div class="ing-meta" *ngIf="ing.amount || ing.unit">
+              <small>{{ ing.amount ?? '' }} {{ ing.unit ?? '' }}</small>
+            </div>
+          </div>
+</div>
         </div>
-      </ion-label>
+      </ion-card-content>
 
-      <ion-buttons slot="end">
-        <ion-button color="danger" (click)="deleteRecipe(r)">
+      <ion-item lines="none">
+        <ion-button slot="end" color="danger" (click)="deleteRecipe(r)">
           <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
         </ion-button>
-      </ion-buttons>
-    </ion-item>
+      </ion-item>
+    </ion-card>
   </ion-list>
 
   <ng-template #empty>
@@ -37,6 +60,7 @@
       <ion-icon name="add"></ion-icon>
     </ion-fab-button>
   </ion-fab>
+
 
   <div class="add-overlay" *ngIf="showAdd">
     <div class="add-card">

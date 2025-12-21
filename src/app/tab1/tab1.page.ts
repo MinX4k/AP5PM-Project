@@ -2,13 +2,13 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { AlertController, ToastController } from '@ionic/angular';
 import { FirebaseService } from '../services/firebase/firebase.service';
 
-
 interface Ingredient {
   name: string;
   amount: number | null;
   unit?: string;
+  productId?: string;
+  available?: boolean;
 }
-
 
 @Component({
   selector: 'app-tab1',
@@ -18,7 +18,9 @@ interface Ingredient {
 })
 export class Tab1Page implements OnInit, OnDestroy {
   recipes: any[] = [];
-  private unsub: any;
+  pantryItems: any[] = [];
+  private recipesUnsub: any;
+  private pantryUnsub: any;
 
   showAdd = false;
   newRecipeName = '';
@@ -36,13 +38,95 @@ export class Tab1Page implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit() {
-    this.unsub = this.fs.onCollectionRealtime(this.fs.recipesCollection(), (docs) => {
-      this.recipes = docs.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+    this.recipesUnsub = this.fs.onCollectionRealtime(this.fs.recipesCollection(), (docs) => {
+      this.recipes = docs.map(d => this.normalizeRecipe(d));
+      this.updateAllRecipesAvailability();
+    });
+
+    this.pantryUnsub = this.fs.onCollectionRealtime(this.fs.pantryCollection(), (items) => {
+      this.pantryItems = items;
+      this.updateAllRecipesAvailability();
     });
   }
 
   ngOnDestroy() {
-    if (this.unsub) this.unsub();
+    if (this.recipesUnsub) this.recipesUnsub();
+    if (this.pantryUnsub) this.pantryUnsub();
+  }
+
+  private normalizeRecipe(r: any) {
+    const recipe = { ...r };
+    recipe.ingredients = Array.isArray(recipe.ingredients) ? recipe.ingredients : [];
+    recipe.ingredients = recipe.ingredients.map((ing: any) => ({
+      name: (ing?.name ?? '').trim(),
+      amount: ing?.amount ?? null,
+      unit: ing?.unit ?? '',
+      productId: ing?.productId ?? null
+    }));
+    return recipe;
+  }
+
+  private buildPantryIndex() {
+    const byProductId = new Map<string, number>();
+    const byName = new Map<string, number>();
+
+    for (const p of this.pantryItems) {
+      const amt = Number(p.amount ?? 0);
+      if (p.productId) {
+        const key = String(p.productId);
+        byProductId.set(key, (byProductId.get(key) ?? 0) + (isNaN(amt) ? 0 : amt));
+    }
+      const name = (p.productName ?? p.name ?? '').toString().trim().toLowerCase();
+      if (name) {
+      byName.set(name, (byName.get(name) ?? 0) + (isNaN(amt) ? 0 : amt));
+    }
+    }
+    return { byProductId, byName };
+  }
+
+  private updateAllRecipesAvailability() {
+    if (!this.recipes) return;
+    const idx = this.buildPantryIndex();
+
+    this.recipes = this.recipes.map(recipe => {
+      const ingredients = (recipe.ingredients || []).map((ing: Ingredient) => {
+        const needed = Number(ing.amount ?? 0);
+        const nameNorm = (ing.name || '').toString().trim().toLowerCase();
+        const productId = ing.productId ? String(ing.productId) : null;
+
+        const availableById = productId ? (idx.byProductId.get(productId) ?? 0) : null
+        const availableByName = nameNorm ? (idx.byName.get(nameNorm) ?? 0) : null;
+
+        let state: 'full' | 'partial' | 'none';
+        const available = productId ? (availableById ?? 0) : (availableByName ?? 0);
+
+        if (!needed || needed <= 0) {
+        state = (available > 0) ? 'full' : 'none';
+      } else {
+        if (available >= needed && available > 0) state = 'full';
+        else if (available > 0 && available < needed) state = 'partial';
+        else state = 'none';
+      }
+
+        return { ...ing, availableState: state, availableAmount: available };
+      });
+      return { ...recipe, ingredients };
+    });
+  }
+
+  getIngredientState(ing: Ingredient): 'full' | 'partial' | 'none' {
+  return (ing as any).availableState ?? 'none';
+}
+
+  async deleteRecipe(recipe: any) {
+    if (!recipe?.id) return;
+    try {
+      await this.fs.deleteDoc('recipes', recipe.id);
+      this.showToast("Recept smazán.")
+    } catch (e) {
+      console.error(e);
+      this.showToast('Chyba při mazání');
+    }
   }
 
   openAdd() {
@@ -119,19 +203,8 @@ export class Tab1Page implements OnInit, OnDestroy {
     }
   }
 
-  async deleteRecipe(recipe: any) {
-    if (!recipe?.id) return;
-    try {
-      await this.fs.deleteDoc('recipes', recipe.id);
-      await this.showToast('Recept smazán');
-    } catch (e) {
-      console.error('Chyba při mazání receptu', e);
-      await this.showToast('Chyba při mazání');
-    }
-  }
-
   private async showToast(msg: string) {
-    const t = await this.toastCtrl.create({ message: msg, duration: 1500 });
+    const t = await this.toastCtrl.create({ message: msg, duration: 1500, position: 'top'});
     await t.present();
   }
 }

@@ -28,7 +28,6 @@ export class Tab3Page {
   ) {}
 
   async scan() {
-  // kontrola platformy – skener funguje jen nativně
   if (!Capacitor.isNativePlatform()) {
     await this.presentToast('Skenování funguje pouze na nativním zařízení.');
     return;
@@ -89,14 +88,18 @@ export class Tab3Page {
     await this.presentToast('Produkt uložen: ' + docRef.id);
 
     if (this.amount && Number(this.amount) > 0) {
-      await this.pantry.addPantryItem(docRef.id, Number(this.amount), this.unit, this.name);
-      await this.presentToast('Přidáno do spíže');
+      const res = await this.pantry.mergeAddPantryItem(this.name, Number(this.amount), this.unit);
+      if (res.merged) {
+        await this.presentToast('Položka existovala, množství bylo navýšeno.');
+      } else {
+        await this.presentToast('Položka přidána do spíže.');
+      }
       this.name = ''; this.barcode = ''; this.amount = 1;
     }
   }
 
   private async presentToast(msg: string) {
-    const t = await this.toast.create({ message: msg, duration: 2000 });
+    const t = await this.toast.create({ message: msg, duration: 2000, position: 'top'});
     await t.present();
   }
 }
